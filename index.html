@@ -1,482 +1,69 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>TEC FIGHTERS</title>
-    <link rel="icon" type="image/x-icon" href="./img/favicon-16x16.ico">
-
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: 'Courier New', monospace;
-            background: linear-gradient(135deg, #070738, #16213e, #0f3460);
-            min-height: 100vh;
-            overflow-x: hidden;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        /* Menu overlay kept as before */
-        .menu-overlay {
-            position: fixed;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            background: linear-gradient(135deg, #1a1a2ecc, #0f3460cc);
-        }
-
-        .menu-panel { text-align: center; max-width: 420px; width: 92%; padding: 28px; border-radius: 12px; background: rgba(10,10,20,0.7); box-shadow: 0 10px 30px rgba(0,0,0,0.6); color: #fff; }
-
-        .menu-logo { max-width: 260px; margin: 0 auto 18px; }
-        .menu-logo img { width: 100%; height: auto; display:block; }
-        .menu-title { font-size: 2.2rem; letter-spacing: 3px; margin-bottom: 18px; text-shadow: 0 2px 8px rgba(0,0,0,0.8); }
-        .menu-buttons { display:flex; flex-direction:column; gap:12px; margin-top:8px; }
-        .btn { padding: 12px 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; text-transform: uppercase; font-family: 'Courier New', monospace; }
-        .btn.primary { background: linear-gradient(45deg,#1976d2,#42a5f5); color: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-        .btn.primary:hover { transform: translateY(-3px) scale(1.02); }
-        .btn.secondary { background: linear-gradient(45deg,#424242,#616161); color: #fff; }
-
-        /* Modals kept */
-        .modal {  display: none; position: fixed; inset: 0; z-index: 11000; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(5px); align-items: center; justify-content: center; }
-        .modal .modal-content { background: linear-gradient(135deg,#1a1a2e,#16213e); margin: 5% auto; padding: 24px; border-radius: 12px; width: 90%; max-width: 640px; max-height: 80vh;
-             overflow-y: auto; color: #ccc; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .modal h2 { color:#fff; text-align:center; margin-bottom:12px; }
-        .close-btn { margin-top:16px; display:block; margin-left:auto; margin-right:auto; }
-
-        /* Decorative small elements */
-        .decorative-elements { position: fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:9000;}
-        .dot { position:absolute; border-radius:50%; animation: pulse 2s infinite; }
-        .dot-1 { top:20px; right:20px; width:8px; height:8px; background:#42a5f5; }
-        .dot-2 { top:80px; right:80px; width:4px; height:4px; background:#fff; animation-delay:0.5s; }
-        .dot-3 { bottom:80px; left:80px; width:12px; height:12px; background:#64b5f6; animation-delay:1s; }
-        @keyframes pulse { 0%{opacity:.6;transform:scale(1)}50%{opacity:1;transform:scale(1.2)}100%{opacity:.6;transform:scale(1)} }
-
-        /* ===== Game stage centered and HUD inside canvas area ===== */
-        .game-stage {
-            width: 1024px;             /* same logical width as canvas resolution */
-            height: 576px;             /* same logical height as canvas resolution */
-            margin: 40px auto;         /* center horizontally on page */
-            position: relative;        /* HUD absolute children will be relative to this */
-            z-index: 2000;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.6);
-            border-radius: 6px;
-            overflow: hidden;          /* keep HUD within canvas area visually */
-            background: #000;
-        }
-
-        canvas {
-            display: block;
-            width: 100%;               /* scale canvas to container but JS still uses 1024x576 internal resolution */
-            height: 100%;
-            z-index: 1;
-            background: transparent;
-            position: absolute;
-            left: 0;
-            top: 0;
-        }
-
-        /* HUD positioned inside the game-stage */
-        .hud-top {
-            position: absolute;
-            top: 12px;
-            left: 12px;
-            right: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            z-index: 3000;
-            pointer-events: none;
-        }
-
-        .health-left, .health-right {
-            width: 36%;
-            min-width: 220px;
-            max-width: 360px;
-            height: 28px;
-            position: relative;
-            background: #e6e600; /* yellow background */
-            border-radius: 6px;
-            overflow: hidden;
-        }
-
-        #playerHealth, #enemyHealth {
-            position: absolute;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            background: linear-gradient(90deg,#4caf50,#2e7d32); /* green-ish */
-            width: 100%;
-            transition: width 200ms linear;
-            pointer-events: none;
-        }
-
-        /* Enemy health aligns to right visually; keep same element but position wrapper to right */
-        .timer-wrapper {
-            width: 120px;
-            height: 48px;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            background: rgba(0,0,0,0.6);
-            color: #fff;
-            border-radius: 8px;
-            font-weight: 700;
-            pointer-events: none;
-            margin: 0 12px;
-        }
-
-        /* small label overlays (optional) */
-        .label {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            left: 8px;
-            color: #111;
-            font-weight: 700;
-            font-size: 0.9rem;
-            pointer-events: none;
-        }
-
-        .label-right { left: auto; right: 8px; color: #111; }
-
-        #displayText { position:absolute; color:white; display:none; align-items:center; justify-content:center; top:0; right:0; bottom:0; left:0; z-index:4000; pointer-events:none; }
-
-        /* make page responsive: scale down stage on small screens */
-        @media (max-width: 1100px) {
-            .game-stage { width: 92%; height: calc(92% * 576 / 1024); } /* maintain aspect ratio */
-        }
-
-        /* ===== Seleção de Personagem CSS ===== */
-        .character-select-overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 12000;
-            background: linear-gradient(135deg, #070738ee, #16213eee, #0f3460ee);
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-        .character-select-panel {
-            background: rgba(10,10,20,0.95);
-            border-radius: 16px;
-            box-shadow: 0 10px 40px #000a;
-            padding: 32px 24px;
-            max-width: 1100px;
-            width: 96vw;
-            color: #fff;
-            text-align: center;
-        }
-        .character-select-panel h1 {
-            margin-top: 0;
-            font-size: 2.5em;
-            letter-spacing: 2px;
-            text-shadow: 2px 2px #000;
-        }
-        .character-select-panel .instruction {
-            font-size: 1.3em;
-            margin-top: 10px;
-            color: #ffcc00;
-        }
-        .player-select {
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            margin: 30px auto;
-            max-width: 1000px;
-            flex-wrap: wrap;
-        }
-        .player {
-            width: 300px;
-            border: 3px solid gold;
-            background: rgba(0, 0, 0, 0.4);
-            padding: 10px;
-            border-radius: 10px;
-            min-height: 500px;
-            transition: transform 0.2s;
-        }
-        .player img {
-            width: 280px;
-            height: 280px;
-            max-width: 320px;
-            max-height: 320px;
-            object-fit: contain;
-            background-color: white;
-            image-rendering: pixelated;
-            border-radius: 10px;
-            border: 2px solid #fff;
-        }
-        .player h2 {
-            margin: 10px 0;
-            font-size: 1.8em;
-            color: gold;
-            text-shadow: 2px 2px 5px black;
-        }
-        .char-name {
-            font-size: 1.2em;
-            color: #ffcc00;
-            text-shadow: 1px 1px 3px black;
-            margin-top: 5px;
-            min-height: 25px;
-        }
-        .character-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            grid-template-rows: repeat(2, 1fr);
-            gap: 20px;
-            max-width: 800px;
-            margin: 40px auto;
-            justify-items: center;
-            align-items: center;
-        }
-        .char {
-            width: 100px;
-            aspect-ratio: 1/1;
-            border: 3px solid #fff;
-            background-color: white;
-            border-radius: 8px;
-            transition: transform 0.2s, border-color 0.2s;
-        }
-        .char img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            background-color: white;
-            border-radius: 5px;
-            image-rendering: pixelated;
-        }
-        .char:hover {
-            transform: scale(1.1);
-            border-color: gold;
-            cursor: pointer;
-        }
-        .selected-1p {
-            border: 3px solid red !important;
-        }
-        .selected-2p {
-            border: 3px solid yellow !important;
-        }
-        .confirm-btn {
-            background-color: gold;
-            color: #000;
-            font-size: 1.2em;
-            border: none;
-            padding: 10px 30px;
-            border-radius: 10px;
-            margin-top: 10px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-        .confirm-btn:disabled {
-            background-color: #555;
-            color: #999;
-            cursor: not-allowed;
-        }
-        .confirm-btn:hover:not(:disabled) {
-            transform: scale(1.1);
-            background-color: orange;
-        }
-        .footer {
-            margin-top: 20px;
-            font-size: 1.2em;
-            color: #ccc;
-        }
-        .confirmed {
-            animation: pulse 1s infinite alternate;
-            border-color: lime !important;
-        }
-        @keyframes pulse {
-            0% { box-shadow: 0 0 10px lime; }
-            100% { box-shadow: 0 0 30px lime; }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101311">
+  <meta name="description" content="TEC-FIGHTERS 2 — Oito lutadores. Uma arena. Jogo de luta local para dois jogadores.">
+  <title>TEC-FIGHTERS 2</title>
+  <link rel="icon" href="./img/favicon-16x16.ico">
+  <link rel="stylesheet" href="./css/style.css">
+  <link rel="stylesheet" href="./css/menu.css">
+  <link rel="stylesheet" href="./css/hud.css">
 </head>
 <body>
-    <!-- ===== Menu Overlay (visível até iniciar o jogo) ===== -->
-    <div id="mainMenu" class="menu-overlay">
-        <div class="menu-panel">
-            <div class="menu-logo">
-                <img src="./img/tec1.png" alt="Tec Fighters Logo" />
-            </div>
-            <div class="menu-title">TEC FIGHTERS</div>
-            <div class="menu-buttons">
-                <!-- Botão alterado para SELECIONAR PERSONAGEM -->
-                <button class="btn primary" onclick="window.showCharacterSelection()">SELECIONAR PERSONAGEM</button>
-                <button class="btn secondary" onclick="openModal('termsModal')">TERMOS DE USO</button>
-                <button class="btn secondary" onclick="openModal('creditsModal')">CRÉDITOS</button>
-            </div>
-            <p style="color:#cfcfcf;font-size:0.85rem;margin-top:14px;">Pressione ESC para fechar modais</p>
-        </div>
-    </div>
-
-    <!-- Decorative floating dots -->
-    <div class="decorative-elements">
-        <div class="dot dot-1"></div>
-        <div class="dot dot-2"></div>
-        <div class="dot dot-3"></div>
-    </div>
-
-    <!-- ===== Game Stage: canvas + HUD inside same centered container ===== -->
-    <div class="game-stage" id="gameStage">
+  <div class="ambient" aria-hidden="true"></div>
+  <main id="app">
+    <section id="gameStage" class="game-stage" aria-label="Arena TEC-FIGHTERS 2">
+      <canvas id="gameCanvas" aria-label="Arena de luta para dois jogadores"></canvas>
+      <div id="gameHUD" class="game-hud" hidden>
         <div class="hud-top">
-            <div class="health-left">
-                <div id="playerHealth" style="width:100%"></div>
-                <div class="label">PLAYER 1</div>
-            </div>
-
-            <div class="timer-wrapper" id="timer">10</div>
-
-            <div class="health-right" style="text-align:right;">
-                <div id="enemyHealth" style="width:100%"></div>
-                <div class="label label-right">PLAYER 2</div>
-            </div>
+          <div class="fighter-hud" data-fighter="0">
+            <div class="fighter-label"><span>01 / PLAYER 1</span><strong id="p1Name">LEO</strong></div>
+            <div class="health-track" role="progressbar" aria-label="Vida do jogador 1" aria-valuemin="0" aria-valuemax="100" id="p1HealthTrack"><div class="health-fill" id="p1Health"></div></div>
+            <div class="energy-label"><span id="p1SpecialName">ESPECIAL</span><b id="p1EnergyLabel">0%</b></div>
+            <div class="energy-track" role="progressbar" aria-label="Energia do jogador 1" aria-valuemin="0" aria-valuemax="100" id="p1EnergyTrack"><div id="p1Energy" class="energy-fill"></div></div>
+            <div id="p1Combo" class="combo" hidden><strong>2</strong><span>HITS <small>COMBO</small></span></div>
+          </div>
+          <div class="round-clock"><span id="roundLabel">ROUND 1</span><strong id="timer">60</strong><div id="roundScore" aria-label="Placar de rounds">○ ○ <i>VS</i> ○ ○</div></div>
+          <div class="fighter-hud right" data-fighter="1">
+            <div class="fighter-label"><span>PLAYER 2 / 02</span><strong id="p2Name">CAIO</strong></div>
+            <div class="health-track" role="progressbar" aria-label="Vida do jogador 2" aria-valuemin="0" aria-valuemax="100" id="p2HealthTrack"><div class="health-fill" id="p2Health"></div></div>
+            <div class="energy-label"><span id="p2SpecialName">ESPECIAL</span><b id="p2EnergyLabel">0%</b></div>
+            <div class="energy-track" role="progressbar" aria-label="Energia do jogador 2" aria-valuemin="0" aria-valuemax="100" id="p2EnergyTrack"><div id="p2Energy" class="energy-fill"></div></div>
+            <div id="p2Combo" class="combo" hidden><strong>2</strong><span>HITS <small>COMBO</small></span></div>
+          </div>
         </div>
+        <div id="announcement" class="announcement" aria-live="polite"></div>
+        <div class="hud-bottom"><span>TEC-FIGHTERS <b>2</b> <i>LOCAL VERSUS</i></span><div><span id="fps" hidden>60 FPS</span><button data-action="fullscreen" class="icon-button" title="Alternar tela cheia" aria-label="Alternar tela cheia"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6"/></svg></button><button data-action="pause" class="icon-button" title="Pausar / Esc" aria-label="Pausar"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg></button></div></div>
+      </div>
+    </section>
 
-        <canvas></canvas>
-
-        <div id="displayText">Empate</div>
-    </div>
-
-    <!-- Modais -->
-    <div id="termsModal" class="modal">
-        <div class="modal-content">
-            <h2>TERMOS DE USO</h2>
-            <div class="modal-text">
-                <p><strong>1. Aceitação dos Termos</strong><br/>Ao jogar Tec Fighters, você concorda com estes termos de uso.</p>
-                <p><strong>2. Uso do Jogo</strong><br/>Este jogo é fornecido para entretenimento pessoal. É proibido usar o jogo para fins comerciais sem autorização.</p>
-                <p><strong>3. Propriedade Intelectual</strong><br/>Todos os direitos de Tec Fighters pertencem aos seus criadores. É proibida a reprodução não autorizada.</p>
-                <p><strong>4. Conduta do Jogador</strong><br/>Os jogadores devem manter um comportamento respeitoso e seguir as regras estabelecidas.</p>
-                <p><strong>5. Modificações</strong><br/>Estes termos podem ser modificados a qualquer momento. Continuando a usar o jogo, você aceita as mudanças.</p>
-                <p><strong>6. Limitação de Responsabilidade</strong><br/>O jogo é fornecido "como está" sem garantias de qualquer tipo.</p>
-            </div>
-            <button class="close-btn btn primary" onclick="closeModal('termsModal')">VOLTAR</button>
+    <section data-screen="menu" id="mainMenu" class="screen menu-screen" aria-label="Menu principal">
+      <header class="site-header"><a class="wordmark" href="#" data-action="menu" aria-label="TEC-FIGHTERS 2 início">TF<span>2</span><i>EST. 2024</i></a><span class="header-note"><i></i> LOCAL MULTIPLAYER</span><button class="text-button" data-action="fullscreen">TELA CHEIA <span>→</span></button></header>
+      <div class="menu-content">
+        <div class="menu-copy"><p class="eyebrow"><span>01—08</span> NOVA TEMPORADA. MESMA RIVALIDADE.</p><h1>TEC<span>FIGHTERS<i>2</i></span></h1><p class="menu-description">O próximo round é seu.<br>Escolha seu lutador. Deixe sua marca.</p>
+          <nav class="main-actions" aria-label="Menu principal"><button class="play-button" data-action="play"><span>JOGAR</span><i>→</i><small>VERSUS LOCAL · 2 JOGADORES</small></button><button class="menu-row" data-action="select"><span><i>01</i> SELEÇÃO DE PERSONAGENS</span><b>→</b></button><button class="menu-row" data-action="controls"><span><i>02</i> CONTROLES</span><b>→</b></button><button class="menu-row" data-action="settings"><span><i>03</i> CONFIGURAÇÕES</span><b>→</b></button></nav>
         </div>
-    </div>
+        <div class="menu-art" aria-hidden="true"><div class="arena-label"><span>ARENA 001</span><b>RUA DO TEC</b></div><div class="art-halo"></div><img class="hero-fighter hero-left" src="./seleçãoPersonagem/Leo.png" alt=""><img class="hero-fighter hero-right" src="./seleçãoPersonagem/Caio.png" alt=""><span class="art-vs">VS</span><div class="art-caption"><span>8 LUTADORES ORIGINAIS</span><strong>SEM DESCULPAS.<br>SÓ COMBATE.</strong><span>LIGHT / HEAVY / SPECIAL</span></div><div class="art-corner">TF / 02</div></div>
+      </div>
+      <footer class="site-footer"><span>FEITO PARA JOGAR LADO A LADO.</span><div><button data-action="credits">CRÉDITOS</button><button data-action="terms">TERMOS DE USO</button><span>V.2.0</span></div></footer>
+    </section>
 
-    <div id="creditsModal" class="modal">
-        <div class="modal-content">
-            <h2>CRÉDITOS</h2>
+    <section data-screen="select" class="screen selection-screen" hidden aria-label="Seleção de personagens">
+      <header class="section-header"><button class="text-button" data-action="menu">← VOLTAR</button><span class="wordmark">TF<span>2</span></span><span class="header-note">SELEÇÃO / VERSUS LOCAL</span></header>
+      <div class="selection-body"><div class="section-heading"><p class="eyebrow">OITO ESTILOS. UMA ARENA.</p><h2>ESCOLHA SEU <em>LUTADOR.</em></h2><p id="selectionInstruction" aria-live="polite">Jogador 1, escolha e confirme seu personagem.</p></div>
+        <div class="selection-layout"><article class="selection-player p1" id="selectionP1"></article><div class="roster" id="roster" aria-label="Personagens disponíveis"></div><article class="selection-player p2" id="selectionP2"></article></div>
+        <div class="selection-bottom"><span id="selectionStatus">P1 ESCOLHENDO <i>→</i> P2 ESCOLHENDO</span><button id="startFight" class="primary-button" data-action="start" disabled>INICIAR COMBATE <span>→</span></button></div>
+      </div>
+    </section>
 
-            <div class="credits-section">
-                <h3 style="color:white;">DESENVOLVIMENTO</h3>
-                <p style="color:#ccc;">Equipe Tec Fighters</p>
-            </div>
+    <section data-screen="loading" class="screen loading-screen" hidden aria-live="polite"><span class="wordmark">TF<span>2</span></span><div class="loading-line"></div><p>PREPARANDO A ARENA…</p></section>
 
-            <div class="credits-section">
-                <h3 style="color:white;">DESIGN</h3>
-                <p style="color:#ccc;">Design Team</p>
-            </div>
-
-            <div class="credits-section">
-                <h3 style="color:white;">PROGRAMAÇÃO</h3>
-                <p style="color:#ccc;">Development Team</p>
-            </div>
-
-            <div class="copyright" style="text-align:center;padding-top:20px;border-top:1px solid #333;color:#888;font-size:.9rem;">
-                <p>© 2024 Tec Fighters. Todos os direitos reservados.</p>
-            </div>
-
-            <button class="close-btn btn primary" onclick="closeModal('creditsModal')">VOLTAR</button>
-        </div>
-    </div>
-
-    <!-- ===== Seleção de Personagem Overlay ===== -->
-    <div id="characterSelect" class="character-select-overlay">
-        <div class="character-select-panel">
-            <h1>Seleção de Personagem</h1>
-            <div class="instruction" id="instruction">Escolha o personagem do PLAYER 1</div>
-            <div class="player-select">
-                <div class="player" id="player1">
-                    <img src="" alt="P1" id="imgP1">
-                    <h2>PLAYER 1</h2>
-                    <p class="char-name" id="nameP1">Nenhum personagem</p>
-                    <button class="confirm-btn" id="confirmP1" disabled>✅ Confirmar P1</button>
-                </div>
-                <div class="player" id="player2">
-                    <img src="" alt="P2" id="imgP2">
-                    <h2>PLAYER 2</h2>
-                    <p class="char-name" id="nameP2">Nenhum personagem</p>
-                    <button class="confirm-btn" id="confirmP2" disabled>✅ Confirmar P2</button>
-                </div>
-            </div>
-            <div class="character-grid" id="charGrid">
-                <div class="char"><img src="./seleçãoPersonagem/Leo.png" alt="Leo"></div>
-                <div class="char"><img src="./seleçãoPersonagem/Vini.png" alt="Vini"></div>
-                <div class="char"><img src="./seleçãoPersonagem/Rodolfo.png" alt="Rodolfo"></div>
-                <div class="char"><img src="./seleçãoPersonagem/Edu.png" alt="Eduardo"></div>
-                <div class="char"><img src="./seleçãoPersonagem/Gui.png" alt="Gui"></div>
-                <div class="char"><img src="./seleçãoPersonagem/Dantas.png" alt="Dantas"></div>
-                <div class="char"><img src="./seleçãoPersonagem/Caio.png" alt="Caio"></div>
-                <div class="char"><img src="./seleçãoPersonagem/Thales.png" alt="Thales"></div>
-            </div>
-            <div class="footer" id="footer">Pressione INICIAR JOGO para lutar!</div>
-            <!-- Botão INICIAR JOGO dentro da seleção de personagem -->
-            <button class="btn primary" id="startGameBtn" style="margin-top:24px;" disabled>INICIAR JOGO</button>
-        </div>
-    </div>
-
-    <script>
-        // funções do menu/modal (mantêm comportamento do menu; startGame fica em index.js)
-        function openModal(id) {
-            const m = document.getElementById(id);
-            if (!m) return;
-            m.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-        }
-        function closeModal(id) {
-            const m = document.getElementById(id);
-            if (!m) return;
-            m.style.display = 'none';
-            document.body.style.overflow = 'auto';
-        }
-
-        window.onclick = function(event) {
-            const terms = document.getElementById('termsModal');
-            const credits = document.getElementById('creditsModal');
-            if (event.target === terms) closeModal('termsModal');
-            if (event.target === credits) closeModal('creditsModal');
-        };
-
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                closeModal('termsModal');
-                closeModal('creditsModal');
-            }
-            if ((e.key === 'Enter' || e.key === ' ') && document.activeElement && document.activeElement.classList.contains('btn')) {
-                document.activeElement.click();
-            }
-        });
-
-        // Esconder menu quando jogo iniciar — index.js deve fornecer window.startGame()
-        const originalStart = window.startGame;
-        window.startGame = function() {
-            const main = document.getElementById('mainMenu');
-            if (main) main.style.display = 'none';
-            if (typeof originalStart === 'function') originalStart();
-        };
-
-        // animação de entrada suave do painel
-        window.addEventListener('load', () => {
-            const panel = document.querySelector('.menu-panel');
-            if (!panel) return;
-            panel.style.opacity = '0';
-            panel.style.transform = 'translateY(30px)';
-            setTimeout(() => {
-                panel.style.transition = 'all 600ms ease';
-                panel.style.opacity = '1';
-                panel.style.transform = 'translateY(0)';
-            }, 80);
-        });
-    </script>
-
-    <!-- scripts do jogo -->
-    <script src="./js/utilidades.js"></script>
-    <script src="./js/classes.js"></script>
-    <script src="./index.js"></script>
+    <section id="panelOverlay" class="panel-overlay" hidden><div id="panel" class="panel" role="dialog" aria-modal="true" aria-labelledby="panelTitle"><div class="panel-top"><span class="eyebrow">TEC-FIGHTERS 2</span><button data-action="close" class="icon-button" aria-label="Fechar">×</button></div><div id="panelBody"></div></div></section>
+    <div id="toast" role="status" hidden></div>
+  </main>
+  <noscript>Ative o JavaScript para jogar TEC-FIGHTERS 2.</noscript>
+  <script type="module" src="./js/main.js"></script>
 </body>
 </html>
