@@ -6,6 +6,12 @@ export const DEFAULT_BINDINGS = Object.freeze([
   Object.freeze({ left: 'KeyA', right: 'KeyD', jump: 'KeyW', light: 'Space', heavy: 'KeyF', special: 'KeyG', guard: 'KeyS', dodge: 'KeyQ' }),
   Object.freeze({ left: 'ArrowLeft', right: 'ArrowRight', jump: 'ArrowUp', light: 'ArrowDown', heavy: 'Numpad1', special: 'Numpad2', guard: 'Numpad0', dodge: 'Numpad3' })
 ])
+export const PAD_ACTION_LABELS = Object.freeze({ jump: 'Pular / confirmar', light: 'Ataque leve', heavy: 'Ataque pesado', guard: 'Defender', dodge: 'Esquivar / voltar', special: 'Especial', pause: 'Pausar' })
+export const DEFAULT_PAD_BINDINGS = Object.freeze([
+  Object.freeze({ jump: 0, light: 2, heavy: 3, guard: 4, dodge: 1, special: 5, pause: 9 }),
+  Object.freeze({ jump: 0, light: 2, heavy: 3, guard: 4, dodge: 1, special: 5, pause: 9 })
+])
+const validPadButton = value => Number.isInteger(value) && value >= 0 && value < 12
 const STORAGE_KEY = 'tec-fighters-2:settings:v1'
 const BOOLEAN_KEYS = ['muted', 'particles', 'shake', 'showFPS', 'extraEffects']
 const VOLUME_KEYS = ['masterVolume', 'musicVolume', 'sfxVolume']
@@ -14,7 +20,7 @@ const validCode = code => typeof code === 'string' && /^(Key[A-Z]|Digit[0-9]|Num
 const defaults = () => ({
   masterVolume: 0.65, musicVolume: 0.25, sfxVolume: 0.7, muted: false,
   renderScale: 1, effectsQuality: 'high', particles: true, shake: true,
-  showFPS: false, extraEffects: true, bindings: DEFAULT_BINDINGS.map(player => ({ ...player }))
+  showFPS: false, extraEffects: true, padPlayers: [0, 1], padBindings: DEFAULT_PAD_BINDINGS.map(pad => ({ ...pad })), bindings: DEFAULT_BINDINGS.map(player => ({ ...player }))
 })
 
 function sanitize(raw) {
@@ -30,6 +36,16 @@ function sanitize(raw) {
     if (codes.every(code => validCode(code) && !RESERVED.has(code)) && new Set(codes).size === codes.length) {
       value.bindings = bindings.map(player => Object.fromEntries(Object.keys(ACTION_LABELS).map(action => [action, player[action]])))
     }
+  }
+  if (Array.isArray(raw.padPlayers) && raw.padPlayers.length === 2 && raw.padPlayers.every(player => player === 0 || player === 1) && raw.padPlayers[0] !== raw.padPlayers[1]) value.padPlayers = [...raw.padPlayers]
+  if (Array.isArray(raw.padBindings) && raw.padBindings.length === 2) {
+    value.padBindings = raw.padBindings.map((bindings, index) => {
+      const merged = { ...DEFAULT_PAD_BINDINGS[index], ...bindings }
+      const buttons = Object.keys(PAD_ACTION_LABELS).map(action => merged[action])
+      return buttons.every(validPadButton) && new Set(buttons).size === buttons.length
+        ? Object.fromEntries(Object.keys(PAD_ACTION_LABELS).map(action => [action, merged[action]]))
+        : { ...DEFAULT_PAD_BINDINGS[index] }
+    })
   }
   return value
 }
@@ -48,7 +64,7 @@ export class Settings {
     for (const listener of this.listeners) listener(this.values)
   }
   set(key, value) {
-    if (key === 'bindings' || !Object.hasOwn(this.values, key)) return false
+    if (['bindings', 'padBindings', 'padPlayers'].includes(key) || !Object.hasOwn(this.values, key)) return false
     this.values = sanitize({ ...this.values, [key]: value })
     this.persist()
     return true
@@ -64,6 +80,28 @@ export class Settings {
     this.values.bindings[player][action] = code
     this.persist()
     return { ok: true }
+  }
+  bindPad(player, action, button) {
+    if (![0, 1].includes(player) || !Object.hasOwn(PAD_ACTION_LABELS, action)) return { ok: false, error: 'Comando de controle inválido.' }
+    if (!validPadButton(button)) return { ok: false, error: 'Botão inválido. O direcional é reservado à movimentação.' }
+    for (const [otherAction, current] of Object.entries(this.values.padBindings[player])) {
+      if (current === button && otherAction !== action) return { ok: false, error: `Conflito: ${PAD_ACTION_LABELS[otherAction]} já usa o botão ${button}.` }
+    }
+    this.values.padBindings[player][action] = button
+    this.persist()
+    return { ok: true }
+  }
+  resetPadBindings() {
+    this.values.padBindings = DEFAULT_PAD_BINDINGS.map(pad => ({ ...pad }))
+    this.values.padPlayers = [0, 1]
+    this.persist()
+  }
+  setPadPlayer(slot, player) {
+    if (![0, 1].includes(slot) || ![0, 1].includes(player)) return false
+    this.values.padPlayers[1 - slot] = 1 - player
+    this.values.padPlayers[slot] = player
+    this.persist()
+    return true
   }
   resetBindings() {
     this.values.bindings = DEFAULT_BINDINGS.map(player => ({ ...player }))

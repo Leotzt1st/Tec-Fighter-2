@@ -59,6 +59,10 @@ try {
   check('fullscreen enters and exits through an actual user action');
 
   await page.locator('[data-action="play"]').click();
+  await page.locator('[data-action="choose-mode"][data-mode="versus"]').click();
+  await page.locator('#selectionP1 [data-action="confirm"]').click();
+  await page.locator('#selectionP2 [data-action="confirm"]').click();
+  await page.locator('#startFight').click();
   await page.waitForFunction(() => window.tecFighters.game.combat?.phase === 'fight');
   await resetCombat();
   const initialHP = await page.evaluate(() => window.tecFighters.game.combat.fighters[1].health);

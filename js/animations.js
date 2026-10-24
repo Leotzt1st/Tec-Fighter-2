@@ -1,4 +1,5 @@
-/** As poses derivadas usam os sprites originais; substitua sheet/frames para adicionar arte final. */
+/** Combate preserva os sprites originais; encerramentos usam arte pixel SVG própria. */
+export const ENDING_DURATION = 2.4;
 export const ANIMATIONS = Object.freeze({
   idle: { sheet: 'idle', fps: 6, loop: true },
   walk: { sheet: 'walk', fps: 11, loop: true },
@@ -16,9 +17,14 @@ export const ANIMATIONS = Object.freeze({
   victory: { sheet: 'attack', frame: 2 }
 });
 
-// Optional per-character final artwork. Keys match a character id and state.
-// Example: leo: { victory: { src: './assets/characters/leo/victory.png', frames: 6, fps: 10 } }
-export const SPRITE_OVERRIDES = {};
+// Dedicated, authored six-cell sprite strips; end frames hold rather than loop.
+export const SPRITE_OVERRIDES = Object.fromEntries(
+  ['leo', 'vini', 'rodolfo', 'eduardo', 'gui', 'dantas', 'caio', 'thales'].map(id => {
+    const victory = { src: `./assets/characters/${id}/victory.svg`, frames: 6, fps: 3, loop: false };
+    const defeat = { src: `./assets/characters/${id}/defeat.svg`, frames: 6, fps: 3, loop: false };
+    return [id, { victory, ko: defeat, defeat }];
+  })
+);
 
 export function poseFor(fighter, time) {
   const t = fighter.stateTime || 0;
@@ -43,8 +49,8 @@ export function poseFor(fighter, time) {
       if (kind === 'blink') pose.alpha = .4 + Math.abs(Math.sin(t * 24)) * .6;
       break;
     }
-    case 'ko': case 'defeat': pose.rotation = -Math.min(1, t * 3) * Math.PI / 2; pose.y = -6; break;
-    case 'victory': pose.y = -Math.abs(Math.sin(t * 5)) * 10; pose.sy = 1.04; break;
+    // The new ending sheets already contain each character's full motion.
+    case 'ko': case 'defeat': case 'victory': break;
   }
   return pose;
 }

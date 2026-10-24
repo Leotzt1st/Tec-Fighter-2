@@ -136,6 +136,7 @@ export class AudioManager {
         break
       }
       case 'ko': tone(130, 28, 0.65, 0.3, 'sawtooth'); noise(0.5, 0.18, 1400); break
+      case 'promotion': [523.25, 659.25, 783.99, 1046.5, 1568].forEach((frequency, index) => tone(frequency, frequency * 1.1, .45, .13, 'triangle', index * .12)); break
       case 'victory': [440, 554.37, 659.25, 880].forEach((frequency, index) => tone(frequency, frequency, 0.3, 0.12, 'triangle', index * 0.12)); break
     }
   }

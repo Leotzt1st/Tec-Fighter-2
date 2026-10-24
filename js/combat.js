@@ -8,8 +8,10 @@ const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 const empty = {}
 
 export class Combat {
-  constructor(ids = ['leo', 'caio'], onEvent = () => {}) {
+  constructor(ids = ['leo', 'caio'], onEvent = () => {}, options = {}) {
     this.onEvent = onEvent
+    this.roundsToWin = options.roundsToWin === 1 ? 1 : 2
+    this.preserveOnDraw = !!options.preserveOnDraw
     this.fighters = ids.map((id, i) => new Player(getCharacter(id), i))
     this.round = 1
     this.wins = [0, 0]
@@ -42,16 +44,24 @@ export class Combat {
     }
     if (this.phase === 'roundOver') {
       this.fighters.forEach(f => { f.stateTime += dt })
-      if (this.phaseTime >= 2.2) {
-        if (this.wins.some(score => score >= 2)) {
+      if (this.phaseTime >= 2.6) {
+        if (this.wins.some(score => score >= this.roundsToWin)) {
           this.phase = 'matchOver'
           this.phaseTime = 0
-          this.winner = this.wins[0] >= 2 ? 0 : 1
-          this.fighters.forEach((f, i) => f.setState(i === this.winner ? 'victory' : 'defeat'))
+          this.winner = this.wins[0] >= this.roundsToWin ? 0 : 1
+          this.fighters.forEach((f, i) => {
+            const elapsed = f.stateTime
+            f.setState(i === this.winner ? 'victory' : 'defeat')
+            f.stateTime = elapsed // Hold the final frame; never replay the fall.
+          })
           this.emit('victory', this.fighters[this.winner])
         } else {
           if (this.roundWinner !== null) this.round++
-          this.fighters.forEach((f, i) => f.reset(i === 0 ? 390 : 890))
+          this.fighters.forEach((f, i) => {
+            const health = f.health, energy = f.energy
+            f.reset(i === 0 ? 390 : 890)
+            if (this.preserveOnDraw && this.roundWinner === null) { f.health = health; f.energy = energy }
+          })
           this.timeLeft = 60
           this.phase = 'intro'
           this.phaseTime = 0

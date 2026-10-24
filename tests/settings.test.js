@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { Settings, DEFAULT_BINDINGS } from '../js/settings.js'
+import { Settings, DEFAULT_BINDINGS, DEFAULT_PAD_BINDINGS } from '../js/settings.js'
 
 const memory = (saved = null) => ({ value: saved, getItem() { return this.value }, setItem(key, value) { this.value = value } })
 
@@ -45,4 +45,26 @@ test('storage restrictions do not break settings and subscribers can detach', ()
   settings.reset()
   assert.equal(changes, 1)
   assert.equal(settings.values.particles, true)
+})
+
+
+test('gamepad bindings detect local conflicts and survive persistence with mixed-player assignment', () => {
+  const storage = memory(), settings = new Settings(storage)
+  assert.equal(settings.bindPad(0, 'special', 0).ok, false)
+  assert.equal(settings.bindPad(0, 'special', 14).ok, false)
+  assert.equal(settings.bindPad(0, 'special', 8).ok, true)
+  settings.setPadPlayer(0, 1)
+  const restored = new Settings(storage)
+  assert.equal(restored.values.padBindings[0].special, 8)
+  assert.deepEqual(restored.values.padPlayers, [1, 0])
+  restored.resetPadBindings()
+  assert.deepEqual(restored.values.padBindings, DEFAULT_PAD_BINDINGS)
+  assert.deepEqual(restored.values.padPlayers, [0, 1])
+})
+
+test('old preferences migrate to pad defaults and corrupt pad mappings cannot remove pause or duplicate buttons', () => {
+  assert.deepEqual(new Settings(memory(JSON.stringify({ muted: true }))).values.padBindings, DEFAULT_PAD_BINDINGS)
+  const settings = new Settings(memory(JSON.stringify({ padPlayers: [1,1], padBindings: [{ pause: 0 }, { jump: 'bad' }] })))
+  assert.deepEqual(settings.values.padBindings, DEFAULT_PAD_BINDINGS)
+  assert.deepEqual(settings.values.padPlayers, [0,1])
 })
