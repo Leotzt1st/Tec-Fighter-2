@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>TEC FIGHTERS</title>
+    <link rel="icon" type="image/x-icon" href="./img/favicon-16x16.ico">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #070738, #16213e, #0f3460);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Menu overlay kept as before */
+        .menu-overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            background: linear-gradient(135deg, #1a1a2ecc, #0f3460cc);
+        }
+
+        .menu-panel { text-align: center; max-width: 420px; width: 92%; padding: 28px; border-radius: 12px; background: rgba(10,10,20,0.7); box-shadow: 0 10px 30px rgba(0,0,0,0.6); color: #fff; }
+
+        .menu-logo { max-width: 260px; margin: 0 auto 18px; }
+        .menu-logo img { width: 100%; height: auto; display:block; }
+        .menu-title { font-size: 2.2rem; letter-spacing: 3px; margin-bottom: 18px; text-shadow: 0 2px 8px rgba(0,0,0,0.8); }
+        .menu-buttons { display:flex; flex-direction:column; gap:12px; margin-top:8px; }
+        .btn { padding: 12px 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; text-transform: uppercase; font-family: 'Courier New', monospace; }
+        .btn.primary { background: linear-gradient(45deg,#1976d2,#42a5f5); color: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .btn.primary:hover { transform: translateY(-3px) scale(1.02); }
+        .btn.secondary { background: linear-gradient(45deg,#424242,#616161); color: #fff; }
+
+        /* Modals kept */
+        .modal {  display: none; position: fixed; inset: 0; z-index: 11000; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(5px); align-items: center; justify-content: center; }
+        .modal .modal-content { background: linear-gradient(135deg,#1a1a2e,#16213e); margin: 5% auto; padding: 24px; border-radius: 12px; width: 90%; max-width: 640px; max-height: 80vh;
+             overflow-y: auto; color: #ccc; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .modal h2 { color:#fff; text-align:center; margin-bottom:12px; }
+        .close-btn { margin-top:16px; display:block; margin-left:auto; margin-right:auto; }
+
+        /* Decorative small elements */
+        .decorative-elements { position: fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:9000;}
+        .dot { position:absolute; border-radius:50%; animation: pulse 2s infinite; }
+        .dot-1 { top:20px; right:20px; width:8px; height:8px; background:#42a5f5; }
+        .dot-2 { top:80px; right:80px; width:4px; height:4px; background:#fff; animation-delay:0.5s; }
+        .dot-3 { bottom:80px; left:80px; width:12px; height:12px; background:#64b5f6; animation-delay:1s; }
+        @keyframes pulse { 0%{opacity:.6;transform:scale(1)}50%{opacity:1;transform:scale(1.2)}100%{opacity:.6;transform:scale(1)} }
+
+        /* ===== Game stage centered and HUD inside canvas area ===== */
+        .game-stage {
+            width: 1024px;             /* same logical width as canvas resolution */
+            height: 576px;             /* same logical height as canvas resolution */
+            margin: 40px auto;         /* center horizontally on page */
+            position: relative;        /* HUD absolute children will be relative to this */
+            z-index: 2000;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+            border-radius: 6px;
+            overflow: hidden;          /* keep HUD within canvas area visually */
+            background: #000;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;               /* scale canvas to container but JS still uses 1024x576 internal resolution */
+            height: 100%;
+            z-index: 1;
+            background: transparent;
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+
+        /* HUD positioned inside the game-stage */
+        .hud-top {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 3000;
+            pointer-events: none;
+        }
+
+        .health-left, .health-right {
+            width: 36%;
+            min-width: 220px;
+            max-width: 360px;
+            height: 28px;
+            position: relative;
+            background: #e6e600; /* yellow background */
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        #playerHealth, #enemyHealth {
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            background: linear-gradient(90deg,#4caf50,#2e7d32); /* green-ish */
+            width: 100%;
+            transition: width 200ms linear;
+            pointer-events: none;
+        }
+
+        /* Enemy health aligns to right visually; keep same element but position wrapper to right */
+        .timer-wrapper {
+            width: 120px;
+            height: 48px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background: rgba(0,0,0,0.6);
+            color: #fff;
+            border-radius: 8px;
+            font-weight: 700;
+            pointer-events: none;
+            margin: 0 12px;
+        }
+
+        /* small label overlays (optional) */
+        .label {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            left: 8px;
+            color: #111;
+            font-weight: 700;
+            font-size: 0.9rem;
+            pointer-events: none;
+        }
+
+        .label-right { left: auto; right: 8px; color: #111; }
+
+        #displayText { position:absolute; color:white; display:none; align-items:center; justify-content:center; top:0; right:0; bottom:0; left:0; z-index:4000; pointer-events:none; }
+
+        /* make page responsive: scale down stage on small screens */
+        @media (max-width: 1100px) {
+            .game-stage { width: 92%; height: calc(92% * 576 / 1024); } /* maintain aspect ratio */
+        }
+
+        /* ===== Seleção de Personagem CSS ===== */
+        .character-select-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 12000;
+            background: linear-gradient(135deg, #070738ee, #16213eee, #0f3460ee);
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .character-select-panel {
+            background: rgba(10,10,20,0.95);
+            border-radius: 16px;
+            box-shadow: 0 10px 40px #000a;
+            padding: 32px 24px;
+            max-width: 1100px;
+            width: 96vw;
+            color: #fff;
+            text-align: center;
+        }
+        .character-select-panel h1 {
+            margin-top: 0;
+            font-size: 2.5em;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px #000;
+        }
+        .character-select-panel .instruction {
+            font-size: 1.3em;
+            margin-top: 10px;
+            color: #ffcc00;
+        }
+        .player-select {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            margin: 30px auto;
+            max-width: 1000px;
+            flex-wrap: wrap;
+        }
+        .player {
+            width: 300px;
+            border: 3px solid gold;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 10px;
+            border-radius: 10px;
+            min-height: 500px;
+            transition: transform 0.2s;
+        }
+        .player img {
+            width: 280px;
+            height: 280px;
+            max-width: 320px;
+            max-height: 320px;
+            object-fit: contain;
+            background-color: white;
+            image-rendering: pixelated;
+            border-radius: 10px;
+            border: 2px solid #fff;
+        }
+        .player h2 {
+            margin: 10px 0;
+            font-size: 1.8em;
+            color: gold;
+            text-shadow: 2px 2px 5px black;
+        }
+        .char-name {
+            font-size: 1.2em;
+            color: #ffcc00;
+            text-shadow: 1px 1px 3px black;
+            margin-top: 5px;
+            min-height: 25px;
+        }
+        .character-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 20px;
+            max-width: 800px;
+            margin: 40px auto;
+            justify-items: center;
+            align-items: center;
+        }
+        .char {
+            width: 100px;
+            aspect-ratio: 1/1;
+            border: 3px solid #fff;
+            background-color: white;
+            border-radius: 8px;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .char img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background-color: white;
+            border-radius: 5px;
+            image-rendering: pixelated;
+        }
+        .char:hover {
+            transform: scale(1.1);
+            border-color: gold;
+            cursor: pointer;
+        }
+        .selected-1p {
+            border: 3px solid red !important;
+        }
+        .selected-2p {
+            border: 3px solid yellow !important;
+        }
+        .confirm-btn {
+            background-color: gold;
+            color: #000;
+            font-size: 1.2em;
+            border: none;
+            padding: 10px 30px;
+            border-radius: 10px;
+            margin-top: 10px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .confirm-btn:disabled {
+            background-color: #555;
+            color: #999;
+            cursor: not-allowed;
+        }
+        .confirm-btn:hover:not(:disabled) {
+            transform: scale(1.1);
+            background-color: orange;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 1.2em;
+            color: #ccc;
+        }
+        .confirmed {
+            animation: pulse 1s infinite alternate;
+            border-color: lime !important;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 10px lime; }
+            100% { box-shadow: 0 0 30px lime; }
+        }
+    </style>
+</head>
+<body>
+    <!-- ===== Menu Overlay (visível até iniciar o jogo) ===== -->
+    <div id="mainMenu" class="menu-overlay">
+        <div class="menu-panel">
+            <div class="menu-logo">
+                <img src="./img/tec1.png" alt="Tec Fighters Logo" />
+            </div>
+            <div class="menu-title">TEC FIGHTERS</div>
+            <div class="menu-buttons">
+                <!-- Botão alterado para SELECIONAR PERSONAGEM -->
+                <button class="btn primary" onclick="window.showCharacterSelection()">SELECIONAR PERSONAGEM</button>
+                <button class="btn secondary" onclick="openModal('termsModal')">TERMOS DE USO</button>
+                <button class="btn secondary" onclick="openModal('creditsModal')">CRÉDITOS</button>
+            </div>
+            <p style="color:#cfcfcf;font-size:0.85rem;margin-top:14px;">Pressione ESC para fechar modais</p>
+        </div>
+    </div>
+
+    <!-- Decorative floating dots -->
+    <div class="decorative-elements">
+        <div class="dot dot-1"></div>
+        <div class="dot dot-2"></div>
+        <div class="dot dot-3"></div>
+    </div>
+
+    <!-- ===== Game Stage: canvas + HUD inside same centered container ===== -->
+    <div class="game-stage" id="gameStage">
+        <div class="hud-top">
+            <div class="health-left">
+                <div id="playerHealth" style="width:100%"></div>
+                <div class="label">PLAYER 1</div>
+            </div>
+
+            <div class="timer-wrapper" id="timer">10</div>
+
+            <div class="health-right" style="text-align:right;">
+                <div id="enemyHealth" style="width:100%"></div>
+                <div class="label label-right">PLAYER 2</div>
+            </div>
+        </div>
+
+        <canvas></canvas>
+
+        <div id="displayText">Empate</div>
+    </div>
+
+    <!-- Modais -->
+    <div id="termsModal" class="modal">
+        <div class="modal-content">
+            <h2>TERMOS DE USO</h2>
+            <div class="modal-text">
+                <p><strong>1. Aceitação dos Termos</strong><br/>Ao jogar Tec Fighters, você concorda com estes termos de uso.</p>
+                <p><strong>2. Uso do Jogo</strong><br/>Este jogo é fornecido para entretenimento pessoal. É proibido usar o jogo para fins comerciais sem autorização.</p>
+                <p><strong>3. Propriedade Intelectual</strong><br/>Todos os direitos de Tec Fighters pertencem aos seus criadores. É proibida a reprodução não autorizada.</p>
+                <p><strong>4. Conduta do Jogador</strong><br/>Os jogadores devem manter um comportamento respeitoso e seguir as regras estabelecidas.</p>
+                <p><strong>5. Modificações</strong><br/>Estes termos podem ser modificados a qualquer momento. Continuando a usar o jogo, você aceita as mudanças.</p>
+                <p><strong>6. Limitação de Responsabilidade</strong><br/>O jogo é fornecido "como está" sem garantias de qualquer tipo.</p>
+            </div>
+            <button class="close-btn btn primary" onclick="closeModal('termsModal')">VOLTAR</button>
+        </div>
+    </div>
+
+    <div id="creditsModal" class="modal">
+        <div class="modal-content">
+            <h2>CRÉDITOS</h2>
+
+            <div class="credits-section">
+                <h3 style="color:white;">DESENVOLVIMENTO</h3>
+                <p style="color:#ccc;">Equipe Tec Fighters</p>
+            </div>
+
+            <div class="credits-section">
+                <h3 style="color:white;">DESIGN</h3>
+                <p style="color:#ccc;">Design Team</p>
+            </div>
+
+            <div class="credits-section">
+                <h3 style="color:white;">PROGRAMAÇÃO</h3>
+                <p style="color:#ccc;">Development Team</p>
+            </div>
+
+            <div class="copyright" style="text-align:center;padding-top:20px;border-top:1px solid #333;color:#888;font-size:.9rem;">
+                <p>© 2024 Tec Fighters. Todos os direitos reservados.</p>
+            </div>
+
+            <button class="close-btn btn primary" onclick="closeModal('creditsModal')">VOLTAR</button>
+        </div>
+    </div>
+
+    <!-- ===== Seleção de Personagem Overlay ===== -->
+    <div id="characterSelect" class="character-select-overlay">
+        <div class="character-select-panel">
+            <h1>Seleção de Personagem</h1>
+            <div class="instruction" id="instruction">Escolha o personagem do PLAYER 1</div>
+            <div class="player-select">
+                <div class="player" id="player1">
+                    <img src="" alt="P1" id="imgP1">
+                    <h2>PLAYER 1</h2>
+                    <p class="char-name" id="nameP1">Nenhum personagem</p>
+                    <button class="confirm-btn" id="confirmP1" disabled>✅ Confirmar P1</button>
+                </div>
+                <div class="player" id="player2">
+                    <img src="" alt="P2" id="imgP2">
+                    <h2>PLAYER 2</h2>
+                    <p class="char-name" id="nameP2">Nenhum personagem</p>
+                    <button class="confirm-btn" id="confirmP2" disabled>✅ Confirmar P2</button>
+                </div>
+            </div>
+            <div class="character-grid" id="charGrid">
+                <div class="char"><img src="./seleçãoPersonagem/Leo.png" alt="Leo"></div>
+                <div class="char"><img src="./seleçãoPersonagem/Vini.png" alt="Vini"></div>
+                <div class="char"><img src="./seleçãoPersonagem/Rodolfo.png" alt="Rodolfo"></div>
+                <div class="char"><img src="./seleçãoPersonagem/Edu.png" alt="Eduardo"></div>
+                <div class="char"><img src="./seleçãoPersonagem/Gui.png" alt="Gui"></div>
+                <div class="char"><img src="./seleçãoPersonagem/Dantas.png" alt="Dantas"></div>
+                <div class="char"><img src="./seleçãoPersonagem/Caio.png" alt="Caio"></div>
+                <div class="char"><img src="./seleçãoPersonagem/Thales.png" alt="Thales"></div>
+            </div>
+            <div class="footer" id="footer">Pressione INICIAR JOGO para lutar!</div>
+            <!-- Botão INICIAR JOGO dentro da seleção de personagem -->
+            <button class="btn primary" id="startGameBtn" style="margin-top:24px;" disabled>INICIAR JOGO</button>
+        </div>
+    </div>
+
+    <script>
+        // funções do menu/modal (mantêm comportamento do menu; startGame fica em index.js)
+        function openModal(id) {
+            const m = document.getElementById(id);
+            if (!m) return;
+            m.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        function closeModal(id) {
+            const m = document.getElementById(id);
+            if (!m) return;
+            m.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        window.onclick = function(event) {
+            const terms = document.getElementById('termsModal');
+            const credits = document.getElementById('creditsModal');
+            if (event.target === terms) closeModal('termsModal');
+            if (event.target === credits) closeModal('creditsModal');
+        };
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal('termsModal');
+                closeModal('creditsModal');
+            }
+            if ((e.key === 'Enter' || e.key === ' ') && document.activeElement && document.activeElement.classList.contains('btn')) {
+                document.activeElement.click();
+            }
+        });
+
+        // Esconder menu quando jogo iniciar — index.js deve fornecer window.startGame()
+        const originalStart = window.startGame;
+        window.startGame = function() {
+            const main = document.getElementById('mainMenu');
+            if (main) main.style.display = 'none';
+            if (typeof originalStart === 'function') originalStart();
+        };
+
+        // animação de entrada suave do painel
+        window.addEventListener('load', () => {
+            const panel = document.querySelector('.menu-panel');
+            if (!panel) return;
+            panel.style.opacity = '0';
+            panel.style.transform = 'translateY(30px)';
+            setTimeout(() => {
+                panel.style.transition = 'all 600ms ease';
+                panel.style.opacity = '1';
+                panel.style.transform = 'translateY(0)';
+            }, 80);
+        });
+    </script>
+
+    <!-- scripts do jogo -->
+    <script src="./js/utilidades.js"></script>
+    <script src="./js/classes.js"></script>
+    <script src="./index.js"></script>
+</body>
+</html>
