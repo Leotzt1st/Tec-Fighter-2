@@ -218,3 +218,10 @@ Nenhum pacote é necessário para jogar. O relatório de validação está em
 Personagens, imagens e jogo original: Equipe Tec Fighters; design: Design Team;
 programação: Development Team. Mantidos os créditos e termos originais na interface.
 As melhorias de código e síntese sonora fazem parte desta versão do projeto.
+
+## Trailer
+
+[Assistir ou baixar o trailer de TEC-FIGHTERS 2](media/TEC-FIGHTERS-2-Trailer.mp4)
+
+Vídeo MP4 em Full HD (1920×1080), com 45 segundos de combates, especiais,
+apresentação dos personagens e modos de jogo, usando as músicas do projeto.
