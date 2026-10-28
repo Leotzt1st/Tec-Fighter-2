@@ -22,7 +22,7 @@ function win(game, health = 37, energy = 64) {
   step(game, .05);
 }
 
-test('infinite single-round lifecycle preserves exact health/energy across actual match transitions', () => {
+test('infinite single-round lifecycle heals 35% of max health and preserves energy across matches', () => {
   const game = fixture('infinite');
   assert.equal(game.combat.roundsToWin, 1);
   win(game);
@@ -37,7 +37,10 @@ test('infinite single-round lifecycle preserves exact health/energy across actua
   assert.equal(game.input.enabled, false);
   assert.equal(game.session.wins, 1);
   assert.equal(game.nextBattle(), true);
-  assert.equal(game.combat.fighters[0].health, 37);
+  assert.equal(game.combat.fighters[0].health, Math.min(
+    game.combat.fighters[0].maxHealth,
+    37 + game.combat.fighters[0].maxHealth * .35
+  ));
   assert.equal(game.combat.fighters[0].energy, 64);
   assert.equal(game.combat.fighters[1].health, game.combat.fighters[1].maxHealth);
 });

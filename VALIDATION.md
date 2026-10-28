@@ -68,7 +68,7 @@ Os nove novos fluxos Chromium verificam:
 1. Single Player com CPU que se movimenta e ignora comandos humanos do jogador 2.
 2. Combate bloqueado durante encerramento e resultados após a apresentação de 2,6 s.
 3. Arcade completo com sete adversários distintos, excluindo o personagem escolhido.
-4. Transferência exata de 37 de vida e 81 de energia no Infinito.
+4. Recuperação de 35% da vida máxima e transferência de 81 de energia após vitória no Infinito.
 5. Promoções para Prata, Ouro, Diamante e Lenda com os emblemas correspondentes.
 6. Game Over e histórico (personagem, combo, pontos, vitórias e rank) após reload.
 7. Navegação de menus por gamepad, teclado P1 + gamepad P2 e pausa na desconexão.

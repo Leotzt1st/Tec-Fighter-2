@@ -129,8 +129,10 @@ try {
 
   await selectMode('infinite','gui','normal');
   await prepareWinner(0,37,81);await waitResult();await nextBattle();
-  assert.deepEqual(await page.evaluate(()=>{const f=window.tecFighters.game.combat.fighters[0];return {health:f.health,energy:f.energy};}),{health:37,energy:81});
-  check('Infinite transfers exact remaining health and special energy to the next opponent');
+  const transfer=await page.evaluate(()=>{const f=window.tecFighters.game.combat.fighters[0];return {health:f.health,maxHealth:f.maxHealth,energy:f.energy};});
+  assert.equal(transfer.health,Math.min(transfer.maxHealth,37+transfer.maxHealth*.35));
+  assert.equal(transfer.energy,81);
+  check('Infinite heals 35% of maximum health after a win and transfers special energy');
 
   for(const [wins,rank] of [[4,'silver'],[9,'gold'],[19,'diamond'],[29,'legend']]) {
     await page.evaluate(wins=>{window.tecFighters.game.session.wins=wins;},wins);

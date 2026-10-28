@@ -45,22 +45,34 @@ test('Campaign ends on loss and cannot accidentally advance or score the same re
   assert.equal(session.wins, 0); assert.equal(session.over, true); assert.equal(session.next(), false)
 })
 
-test('Infinite preserves exact life and meter, cycles the full opponent bag and caps progression', () => {
+test('Infinite heals 35% of maximum life after wins, preserves meter, cycles opponents and caps progression', () => {
   const session = new ModeSession({ mode: 'infinite', character: 'leo', difficulty: 'easy', random: () => .2 })
   const groups = [[], []]
   for (let i = 0; i < 14; i++) {
     groups[Math.floor(i / 7)].push(session.ids[1])
     const health = 94.3 - i * 4.1, energy = (i * 13.7) % 100
     session.finish(battle(0, health, energy))
-    assert.deepEqual(session.carry, { health, energy })
+    assert.deepEqual(session.carry, { health: Math.min(100, health + 35), energy })
     assert.equal(session.complete, false); assert.equal(session.over, false)
     const before = { ...session.carry }; assert.equal(session.next(), true)
-    assert.deepEqual(session.carry, before, 'advancing never heals or changes meter')
+    assert.deepEqual(session.carry, before, 'advancing does not heal again or change meter')
   }
   for (const group of groups) { assert.equal(new Set(group).size, 7); assert.ok(!group.includes('leo')) }
   for (let i = 0; i < 100; i++) { session.finish(battle()); session.next() }
   assert.equal(session.difficulty, 1)
   session.finish(battle(1, 0, 93)); assert.equal(session.over, true); assert.equal(session.next(), false)
+})
+
+test('Infinite healing is capped at maximum life and only applies after a win', () => {
+  const session = new ModeSession({ mode: 'infinite', character: 'leo' })
+  session.finish(battle(0, 37, 81))
+  assert.deepEqual(session.carry, { health: 72, energy: 81 })
+  session.next()
+  session.finish(battle(0, 90, 22))
+  assert.deepEqual(session.carry, { health: 100, energy: 22 })
+  session.next()
+  session.finish(battle(1, 0, 0))
+  assert.deepEqual(session.carry, { health: 100, energy: 22 })
 })
 
 test('Ranks follow consecutive wins only and promotions occur exactly at each threshold', () => {

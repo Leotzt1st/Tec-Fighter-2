@@ -64,7 +64,12 @@ export class ModeSession {
       this.wins++
       this.score += 1000 + Math.round(Math.max(0, combat.timeLeft || 0) * 10)
         + Math.round(Math.max(0, fighter.health) / fighter.maxHealth * 300)
-      if (this.mode === 'infinite') this.carry = { health: fighter.health, energy: fighter.energy }
+      if (this.mode === 'infinite') {
+        this.carry = {
+          health: Math.min(fighter.maxHealth, fighter.health + fighter.maxHealth * .35),
+          energy: fighter.energy
+        }
+      }
     }
     const rank = getRank(this.wins)
     this.promotion = this.mode === 'infinite' && rank.id !== previousRank.id ? rank : null

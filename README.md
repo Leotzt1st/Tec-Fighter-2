@@ -49,10 +49,11 @@ selecione seu personagem. Nos modos solo, a máquina escolhe um rival diferente.
   por rival, sem repetições. A dificuldade aumenta; vida e energia reiniciam entre
   confrontos. Uma derrota encerra a campanha. A conclusão mostra tempo ativo,
   pontuação, personagem e total derrotado.
-- **INFINITE:** um round por rival, sem fim predefinido. **Vida e energia restantes
-  passam exatamente ao confronto seguinte**, sem restauração. Empates por tempo
-  repetem o confronto preservando os valores dos dois lutadores. O saco de rivais
-  contém os outros sete personagens e só é renovado após todos aparecerem.
+- **INFINITE:** um round por rival, sem fim predefinido. Ao derrotar um rival,
+  recupera **35% da vida máxima**, sem ultrapassar o máximo; a energia restante
+  passa ao confronto seguinte. Empates por tempo repetem o confronto preservando
+  os valores dos dois lutadores. O saco de rivais contém os outros sete personagens
+  e só é renovado após todos aparecerem.
 
 A IA observa distância e ações visíveis, aproxima/recua, usa ataques, combos,
 defesa, esquiva, contra-ataques e especiais pelos mesmos comandos e regras dos
