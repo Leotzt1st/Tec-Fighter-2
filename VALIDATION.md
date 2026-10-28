@@ -91,6 +91,20 @@ sem validar drivers, transmissão Bluetooth ou hardware físico.
 - A responsividade dos menus foi validada; não há comandos de luta por toque.
 - Balanceamento precisa de partidas humanas. Não se promete 60 FPS em todo
   computador: o loop é de passo fixo e os efeitos/resolução são configuráveis.
-- Sem dependências externas para jogar; Web Audio produz música e efeitos após
+- Sem dependências externas para jogar; MP3 locais fornecem as músicas e Web Audio sintetiza os efeitos após
   uma interação do usuário. Playwright/Chromium são requisitos somente de teste.
 - Alterações locais: nenhum push ao GitHub ou publicação foi realizado.
+
+## Músicas enviadas pelo usuário
+
+Os três arquivos originais foram incluídos em `assets/audio/`, sem conversão:
+`MenuTF.mp3` (menu), `Storymode.mp3` (Versus/Single/Arcade) e
+`TecFightersInfinito.mp3` (Infinito). `ffprobe` validou os MP3s: aproximadamente
+37,33 s, 46,03 s e 47,15 s, respectivamente.
+
+O teste focado `npm run test:audio` utiliza Chromium e reprodução real dos MP3s,
+verificando escolha por modo, faixa única ativa, pausa/retomada da posição,
+volumes/silêncio, repetição no fim da faixa, transições rápidas e liberação dos
+recursos. A saída do navegador verifica reprodução e mixer; não é uma avaliação
+subjetiva da música em caixas de som físicas. Os 57 testes de lógica também
+continuam passando.

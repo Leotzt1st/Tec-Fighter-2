@@ -144,8 +144,18 @@ partículas, rastros, breve escurecimento e aproximação de câmera limitada.
 derivações procedurais dos sprites originais. Vitória e derrota possuem arte própria. O contrato está em
 [`assets/characters/README.md`](assets/characters/README.md). Para substituir uma
 pose, registre sua spritesheet em `SPRITE_OVERRIDES` em `js/animations.js`;
-não é necessário reescrever o combate. Música e efeitos são composições/síntese
-originais em Web Audio, sem arquivos externos. Áudio inicia após interação do usuário.
+não é necessário reescrever o combate. As músicas enviadas pelo usuário ficam em `assets/audio/` e tocam em loop:
+
+| Contexto | Música |
+| --- | --- |
+| Menu e seleção de modos/personagens | `MenuTF.mp3` |
+| Versus, Single Player e Arcade | `Storymode.mp3` |
+| Infinite Survival | `TecFightersInfinito.mp3` |
+
+A pausa interrompe a música e a retomada continua do mesmo ponto. A troca de faixa
+pausa a anterior, evitando sobreposição. Volume geral, música e silenciar continuam
+funcionando; efeitos de golpes e navegação permanecem sintetizados em Web Audio.
+Todos os arquivos estão no projeto. O áudio inicia após uma interação do usuário.
 
 ## Configurações e tela
 

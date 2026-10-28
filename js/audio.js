@@ -1,18 +1,24 @@
-// Original, procedural chiptune score and sound design; no external audio assets.
+// User-provided music files; combat and navigation effects remain synthesized.
+export const MUSIC_TRACKS = Object.freeze({
+  menu: './assets/audio/MenuTF.mp3',
+  battle: './assets/audio/Storymode.mp3',
+  infinite: './assets/audio/TecFightersInfinito.mp3'
+})
 export class AudioManager {
   constructor(settings) {
     this.settings = settings
     this.context = null
     this.scene = 'silent'
-    this.timer = null
-    this.beat = 0
-    this.nextBeat = 0
+    this.tracks = new Map()
+    this.musicElement = null
+    this.musicError = null
+    this.destroyed = false
     this.sources = new Set()
-    this.musicSources = new Set()
     this.unsubscribe = settings.subscribe(() => this.applyVolumes())
   }
   async unlock() {
     try {
+      if (this.destroyed) return false
       if (!this.context) {
         const Context = globalThis.AudioContext || globalThis.webkitAudioContext
         if (!Context) return false
@@ -66,54 +72,53 @@ export class AudioManager {
     filter.connect(envelope)
     envelope.connect(channel)
     this.sources.add(source)
-    if (channel === this.music) this.musicSources.add(source)
     source.onended = () => {
       source.disconnect(); filter.disconnect(); envelope.disconnect()
-      this.sources.delete(source); this.musicSources.delete(source)
+      this.sources.delete(source)
     }
     source.start(start)
     source.stop(start + duration + 0.02)
   }
   setScene(scene) {
-    const next = ['menu', 'battle'].includes(scene) ? scene : 'silent'
-    if (this.scene === next) return
-    this.stopMusic()
+    const next = Object.hasOwn(MUSIC_TRACKS, scene) ? scene : 'silent'
+    if (this.scene !== next) this.stopMusic()
     this.scene = next
-    this.beat = 0
-    this.nextBeat = this.context?.currentTime || 0
     this.startMusic()
   }
   stopMusic() {
-    if (this.timer !== null) { clearInterval(this.timer); this.timer = null }
-    for (const source of this.musicSources) { try { source.stop() } catch { /* Already finished. */ } }
-    this.musicSources.clear()
+    // Pausing preserves the playhead so resuming never restarts a fight's music.
+    for (const { element } of this.tracks.values()) element.pause()
   }
   startMusic() {
-    if (!this.context || this.scene === 'silent' || this.timer !== null) return
-    this.nextBeat = this.context.currentTime + 0.04
-    this.scheduleMusic()
-    this.timer = setInterval(() => this.scheduleMusic(), 100)
-  }
-  scheduleMusic() {
-    if (!this.context || this.context.state !== 'running' || this.scene === 'silent') return
-    const now = this.context.currentTime
-    if (this.nextBeat < now - 0.1) this.nextBeat = now + 0.04
-    const battle = this.scene === 'battle'
-    const step = battle ? 0.125 : 0.205
-    const melody = battle ? [69, 0, 72, 76, 0, 74, 72, 0, 67, 0, 71, 74, 0, 72, 71, 67] : [69, 0, 76, 0, 72, 0, 79, 76, 67, 0, 74, 0, 71, 0, 76, 74]
-    const midi = number => 440 * 2 ** ((number - 69) / 12)
-    while (this.nextBeat < now + 0.25) {
-      const index = this.beat % melody.length
-      const note = melody[index]
-      if (!this.settings.values.muted && this.settings.values.musicVolume > 0) {
-        if (note) this.voice({ frequency: midi(note), start: this.nextBeat, duration: step * 1.5, volume: 0.055, wave: battle ? 'square' : 'triangle', cutoff: 1400, channel: this.music })
-        if (this.beat % 4 === 0) this.voice({ frequency: midi(index < 8 ? 45 : 43), start: this.nextBeat, duration: step * 3.5, volume: 0.14, channel: this.music, cutoff: 500 })
-        if (battle && this.beat % 4 === 0) this.voice({ frequency: 110, endFrequency: 35, start: this.nextBeat, duration: 0.12, volume: 0.2, wave: 'sine', channel: this.music })
-        if (battle && this.beat % 4 === 2) this.voice({ start: this.nextBeat, duration: 0.065, volume: 0.04, noise: true, cutoff: 5000, channel: this.music })
-      }
-      this.nextBeat += step
-      this.beat++
+    if (this.destroyed || !this.context || this.context.state !== 'running' || this.scene === 'silent') return
+    let track = this.tracks.get(this.scene)
+    if (!track) {
+      const element = new Audio(MUSIC_TRACKS[this.scene])
+      element.loop = true
+      element.preload = 'metadata'
+      const source = this.context.createMediaElementSource(element)
+      source.connect(this.music)
+      element.addEventListener('error', () => {
+        this.musicError = `Não foi possível carregar a música: ${element.getAttribute('src')}`
+      })
+      track = { element, source, pending: false }
+      this.tracks.set(this.scene, track)
     }
+    this.musicElement = track.element
+    if (!track.element.paused || track.pending) return
+    this.musicError = null
+    track.pending = true
+    // Browsers require a user gesture. Later gestures retry blocked playback.
+    let playbackError
+    Promise.resolve(track.element.play()).catch(error => {
+      playbackError = error
+      if (!['AbortError', 'NotAllowedError'].includes(error.name)) this.musicError = error.message
+    }).finally(() => {
+      track.pending = false
+      // If a scene changed while play() was pending, keep this track paused.
+      if (this.destroyed || this.tracks.get(this.scene) !== track) track.element.pause()
+      else if (track.element.paused && (!playbackError || playbackError.name === 'AbortError')) this.startMusic()
+    })
   }
   play(type, characterIndex = 0) {
     if (!this.context || this.context.state !== 'running' || this.settings.values.muted) return
@@ -141,7 +146,15 @@ export class AudioManager {
     }
   }
   destroy() {
+    this.destroyed = true
     this.stopMusic()
+    for (const { element, source } of this.tracks.values()) {
+      source.disconnect()
+      element.removeAttribute('src')
+      element.load()
+    }
+    this.tracks.clear()
+    this.musicElement = null
     this.unsubscribe()
     for (const source of this.sources) { try { source.stop() } catch { /* Already finished. */ } }
     this.sources.clear()

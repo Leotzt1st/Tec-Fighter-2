@@ -37,7 +37,7 @@ export class Game {
     this.paused = false; this.running = true; this.resultShown = false; this.awaitingNext = false; this.accumulator = 0;
     this.input.enabled = true; this.input.menuEnabled = false;
     this.ui.show('game'); this.ui.update(this.combat, this.session);
-    this.renderer.resize(); this.audio.setScene('battle');
+    this.renderer.resize(); this.audio.setScene(this.mode === 'infinite' ? 'infinite' : 'battle');
   }
   rematch() { this.start({ ids: [this.session?.character || this.ids[0], this.ids[1]], mode: this.mode, difficulty: this.difficulty }); }
   onEvent(event) {
@@ -77,7 +77,7 @@ export class Game {
   resume() {
     if (!this.running || !this.paused) return;
     this.paused = false; this.input.clear(); this.input.enabled = true; this.accumulator = 0;
-    this.audio.setScene('battle'); this.ui.show('game');
+    this.audio.setScene(this.mode === 'infinite' ? 'infinite' : 'battle'); this.ui.show('game');
   }
   menu() {
     this.running = false; this.paused = false; this.awaitingNext = false;
