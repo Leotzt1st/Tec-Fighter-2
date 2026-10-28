@@ -1,0 +1,13 @@
+{
+  "name": "tec-fighters-2",
+  "version": "2.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Jogo de luta HTML5 com Versus, Single Player, Arcade e Infinite Survival.",
+  "scripts": {
+    "start": "python3 -m http.server 8080",
+    "test": "node --test tests/*.test.js",
+    "test:browser": "node tests/browser.spec.mjs && node tests/modes-browser.spec.mjs",
+    "sprites": "node scripts/build-end-sprites.mjs"
+  }
+}
